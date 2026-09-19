@@ -484,7 +484,7 @@
     <h1>매매일지</h1>
     <div class="summary-row">
       <div class="summary-item">
-        <div class="label">누적 실현손익</div>
+        <div class="label">누적 실현손익 (계좌 평균)</div>
         <div class="value" id="sumRealized">0원</div>
       </div>
       <div class="summary-item">
@@ -496,6 +496,7 @@
         <div class="value" id="sumTradeCount">0</div>
       </div>
     </div>
+    <div class="hint" id="sumLotHint" style="margin-top:8px;"></div>
   </header>
 
   <nav class="tabs">
@@ -908,16 +909,32 @@
     refreshRenameSelect();
     var stats = computeStats();
     var totalRealized = 0;
+    var totalLotRealized = 0;
     var holdingCount = 0;
+    var hasAnyLot = false;
     Object.keys(stats).forEach(function(k) {
       totalRealized += stats[k].realized;
       if (stats[k].qty > 0) holdingCount++;
+      stats[k].trades.forEach(function(t) {
+        if (t.type === 'sell') {
+          var lotPL = computeLotPL(t);
+          if (lotPL) { totalLotRealized += lotPL.pl; hasAnyLot = true; }
+          else { totalLotRealized += (t._pl || 0); }
+        }
+      });
     });
     var el = document.getElementById('sumRealized');
     el.textContent = fmtSigned(totalRealized);
     el.className = 'value ' + (totalRealized > 0 ? 'gain' : totalRealized < 0 ? 'loss' : '');
     document.getElementById('sumHoldingCount').textContent = holdingCount;
     document.getElementById('sumTradeCount').textContent = trades.length;
+
+    var hintEl = document.getElementById('sumLotHint');
+    if (hasAnyLot) {
+      hintEl.textContent = '매수회차 기준으로 보면 ' + fmtSigned(totalLotRealized) + '이에요 (실제 계좌에 찍히는 숫자는 위쪽 계좌 평균 기준이에요)';
+    } else {
+      hintEl.textContent = '';
+    }
   }
 
   // ---------- Holdings tab ----------
