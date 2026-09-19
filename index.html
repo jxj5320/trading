@@ -122,13 +122,13 @@
   }
   .tabs button {
     flex: 1;
-    padding: 10px 4px;
+    padding: 10px 2px;
     background: var(--bg-elevated);
     border: none;
     border-left: 1px solid var(--line);
     color: var(--ink-soft);
     font-family: 'Noto Sans KR', sans-serif;
-    font-size: 13.5px;
+    font-size: 12.5px;
     font-weight: 500;
     cursor: pointer;
   }
@@ -502,6 +502,7 @@
     <button class="tab-btn active" data-tab="add">기록추가</button>
     <button class="tab-btn" data-tab="holdings">보유현황</button>
     <button class="tab-btn" data-tab="history">매매기록</button>
+    <button class="tab-btn" data-tab="lots">보유잔량</button>
   </nav>
 
   <main>
@@ -563,6 +564,10 @@
         <input type="text" id="searchStock" placeholder="종목명으로 검색">
       </div>
       <div id="historyList"></div>
+    </section>
+
+    <section id="tab-lots" hidden>
+      <div id="lotsList"></div>
     </section>
   </main>
 
@@ -654,7 +659,8 @@
   var tabSections = {
     add: document.getElementById('tab-add'),
     holdings: document.getElementById('tab-holdings'),
-    history: document.getElementById('tab-history')
+    history: document.getElementById('tab-history'),
+    lots: document.getElementById('tab-lots')
   };
   tabBtns.forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -665,6 +671,7 @@
       });
       if (btn.dataset.tab === 'holdings') renderHoldings();
       if (btn.dataset.tab === 'history') renderHistory();
+      if (btn.dataset.tab === 'lots') renderLots();
     });
   });
 
@@ -742,6 +749,33 @@
       if (!isNaN(v) && v > 0) total += v;
     });
     document.getElementById('f-lot-total').textContent = '총 매도수량: ' + total.toLocaleString('ko-KR') + '주';
+  }
+
+  function renderLots() {
+    var seen = {};
+    var stockNames = [];
+    trades.forEach(function(t) {
+      if (!seen[t.stock]) { seen[t.stock] = true; stockNames.push(t.stock); }
+    });
+    var el = document.getElementById('lotsList');
+    var cards = [];
+    stockNames.forEach(function(name) {
+      var lots = getBuyLots(name);
+      if (lots.length === 0) return;
+      var totalQty = lots.reduce(function(s, l) { return s + l.remaining; }, 0);
+      var totalValue = lots.reduce(function(s, l) { return s + l.remaining * l.price; }, 0);
+      var avg = totalQty > 0 ? totalValue / totalQty : 0;
+      var rows = lots.map(function(l) {
+        return '<div class="lot-item"><span>' + l.date + ' 매수 · ' + fmtWon(l.price) + '</span><span class="v">' + l.remaining.toLocaleString('ko-KR') + '주</span></div>';
+      }).join('');
+      cards.push('<div class="stock-card"><div class="name">' + escapeHtml(name) + '</div>' +
+        '<div class="row"><span>총 잔량</span><span class="v">' + totalQty.toLocaleString('ko-KR') + '주</span></div>' +
+        (lots.length > 1 ? '<div class="row"><span>참고: 계좌 평단가</span><span class="v">' + fmtWon(avg) + '</span></div>' : '') +
+        '<div class="open-lots-list">' + rows + '</div></div>');
+    });
+    el.innerHTML = cards.length
+      ? cards.join('')
+      : '<div class="empty-state">남아있는 매수회차가 없어요.<br>전부 매도했거나 아직 매수 기록이 없어요.</div>';
   }
 
   document.querySelectorAll('#f-tags .chip').forEach(function(chip) {
