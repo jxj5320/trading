@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>매매일지</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#2B2620">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="매매일지">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAF7F0;
+    --bg-elevated: #FFFFFF;
+    --ink: #2B2620;
+    --ink-soft: #7A7264;
+    --line: #E2DACB;
+    --accent: #8B6F4E;
+    --accent-ink: #FAF7F0;
+    --gain: #C13B33;
+    --gain-bg: #FBE7E5;
+    --loss: #2E5C8A;
+    --loss-bg: #E7EEF5;
+    --chip-bg: #F1ECE0;
+    --chip-active-bg: #2B2620;
+    --chip-active-ink: #FAF7F0;
+    --danger: #B23A2E;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1B1814;
+      --bg-elevated: #242019;
+      --ink: #EDE7D9;
+      --ink-soft: #A79E8C;
+      --line: #3A342A;
+      --accent: #C9A876;
+      --accent-ink: #1B1814;
+      --gain: #E2685F;
+      --gain-bg: #3A2220;
+      --loss: #79ABE0;
+      --loss-bg: #1E2C3C;
+      --chip-bg: #2D291F;
+      --chip-active-bg: #EDE7D9;
+      --chip-active-ink: #1B1814;
+      --danger: #E2685F;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1B1814;
+    --bg-elevated: #242019;
+    --ink: #EDE7D9;
+    --ink-soft: #A79E8C;
+    --line: #3A342A;
+    --accent: #C9A876;
+    --accent-ink: #1B1814;
+    --gain: #E2685F;
+    --gain-bg: #3A2220;
+    --loss: #79ABE0;
+    --loss-bg: #1E2C3C;
+    --chip-bg: #2D291F;
+    --chip-active-bg: #EDE7D9;
+    --chip-active-ink: #1B1814;
+    --danger: #E2685F;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Sans KR', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wrap {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 20px 16px 60px;
+    min-height: 100vh;
+  }
+  header {
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 16px;
+  }
+  header h1 {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 26px;
+    font-weight: 700;
+    margin: 0 0 12px;
+    letter-spacing: -0.02em;
+  }
+  .summary-row {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .summary-item .label {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-bottom: 2px;
+  }
+  .summary-item .value {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 19px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .summary-item .value.gain { color: var(--gain); }
+  .summary-item .value.loss { color: var(--loss); }
+
+  .tabs {
+    display: flex;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .tabs button {
+    flex: 1;
+    padding: 10px 4px;
+    background: var(--bg-elevated);
+    border: none;
+    border-left: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .tabs button:first-child { border-left: none; }
+  .tabs button.active {
+    background: var(--ink);
+    color: var(--bg);
+    font-weight: 700;
+  }
+
+  section[hidden] { display: none !important; }
+
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 5px;
+  }
+  .field input[type="text"],
+  .field input[type="number"],
+  .field input[type="date"],
+  .field textarea {
+    width: 100%;
+    padding: 10px 11px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    color: var(--ink);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 15px;
+  }
+  .field textarea { resize: vertical; min-height: 56px; }
+  .field input:focus, .field textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .segmented {
+    display: flex;
+    gap: 8px;
+  }
+  .segmented button {
+    flex: 1;
+    padding: 11px;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    background: var(--bg-elevated);
+    color: var(--ink);
+    font-size: 14.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .segmented button.sel-buy.active {
+    background: var(--gain-bg);
+    border-color: var(--gain);
+    color: var(--gain);
+  }
+  .segmented button.sel-sell.active {
+    background: var(--loss-bg);
+    border-color: var(--loss);
+    color: var(--loss);
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .chip {
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: var(--chip-bg);
+    color: var(--ink);
+    font-size: 13px;
+    border: 1px solid var(--line);
+    cursor: pointer;
+  }
+  .chip.active {
+    background: var(--chip-active-bg);
+    color: var(--chip-active-ink);
+    border-color: var(--chip-active-bg);
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 13px;
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    border-radius: 6px;
+    font-size: 15.5px;
+    font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .form-error {
+    color: var(--danger);
+    font-size: 13px;
+    margin: -6px 0 12px;
+    min-height: 16px;
+  }
+
+  .search-box { margin-bottom: 14px; }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 10px;
+    color: var(--ink-soft);
+    font-size: 14px;
+  }
+
+  .stock-card, .trade-card {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 13px 14px;
+    margin-bottom: 10px;
+    background: var(--bg-elevated);
+  }
+  .stock-card .name {
+    font-family: 'Noto Serif KR', serif;
+    font-weight: 600;
+    font-size: 16.5px;
+    margin-bottom: 6px;
+  }
+  .stock-card .row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    padding: 2px 0;
+  }
+  .stock-card .row span.v { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .stock-card .row span.v.gain { color: var(--gain); font-weight: 600; }
+  .stock-card .row span.v.loss { color: var(--loss); font-weight: 600; }
+  .curprice-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
+  }
+  .curprice-row label { font-size: 13px; color: var(--ink-soft); white-space: nowrap; }
+  .curprice-row input {
+    flex: 1;
+    padding: 7px 9px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+  }
+  .breakeven-box {
+    margin-top: 8px;
+    padding: 9px 10px;
+    border-radius: 5px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .breakeven-box.gain { background: var(--gain-bg); color: var(--gain); }
+  .breakeven-box.loss { background: var(--loss-bg); color: var(--loss); }
+
+  .closed-list-title {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 20px 0 8px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--line);
+  }
+  .closed-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 2px;
+    font-size: 13.5px;
+    border-bottom: 1px solid var(--line);
+  }
+  .closed-item span.v.gain { color: var(--gain); }
+  .closed-item span.v.loss { color: var(--loss); }
+
+  .trade-card { cursor: pointer; }
+  .trade-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .trade-top .stockname {
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .trade-top .date {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-right: 8px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .badge.buy { background: var(--gain-bg); color: var(--gain); }
+  .badge.sell { background: var(--loss-bg); color: var(--loss); }
+  .trade-detail {
+    font-size: 13.5px;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 4px;
+  }
+  .trade-pl {
+    display: inline-block;
+    font-size: 12.5px;
+    font-weight: 700;
+    margin-left: 6px;
+  }
+  .trade-pl.gain { color: var(--gain); }
+  .trade-pl.loss { color: var(--loss); }
+  .trade-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 6px 0 4px;
+  }
+  .trade-tags span {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    background: var(--chip-bg);
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+  .trade-memo {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+
+  .edit-panel {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
+  }
+  .edit-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .edit-actions button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: var(--bg-elevated);
+    color: var(--ink);
+  }
+  .edit-actions button.save { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .edit-actions button.delete { color: var(--danger); border-color: var(--danger); }
+
+  .confirm-delete {
+    margin-top: 8px;
+    padding: 10px;
+    background: var(--gain-bg);
+    border-radius: 5px;
+    font-size: 13px;
+  }
+  .confirm-delete .row { display: flex; gap: 8px; margin-top: 8px; }
+  .confirm-delete button {
+    flex: 1;
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid var(--danger);
+    background: transparent;
+    color: var(--danger);
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .confirm-delete button.cancel { color: var(--ink-soft); border-color: var(--line); }
+
+  .lot-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .lot-row:last-child { border-bottom: none; }
+  .lot-row .lot-info { flex: 1; font-size: 13px; }
+  .lot-row .lot-info .d { color: var(--ink-soft); font-size: 11.5px; }
+  .lot-row input {
+    width: 80px;
+    padding: 7px 8px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--bg-elevated);
+    color: var(--ink);
+    font-size: 14px;
+  }
+  .lot-empty { font-size: 13px; color: var(--ink-soft); padding: 6px 0; }
+  .lot-tag {
+    display: inline-block;
+    font-size: 11px;
+    color: var(--ink-soft);
+    background: var(--chip-bg);
+    padding: 2px 7px;
+    border-radius: 999px;
+    margin-top: 3px;
+  }
+  .pl-line { font-size: 12.5px; margin-top: 2px; }
+  .pl-line .lbl { color: var(--ink-soft); }
+  .open-lots-list {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--line);
+  }
+  .open-lots-list .lot-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    padding: 3px 0;
+  }
+  .open-lots-list .lot-item span.v { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  details.backup-block {
+    margin-top: 24px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+  details.backup-block summary {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  details.backup-block textarea {
+    margin-top: 10px;
+    min-height: 80px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>매매일지</h1>
+    <div class="summary-row">
+      <div class="summary-item">
+        <div class="label">누적 실현손익</div>
+        <div class="value" id="sumRealized">0원</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">보유 종목</div>
+        <div class="value" id="sumHoldingCount">0</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">총 매매 건수</div>
+        <div class="value" id="sumTradeCount">0</div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="add">기록추가</button>
+    <button class="tab-btn" data-tab="holdings">보유현황</button>
+    <button class="tab-btn" data-tab="history">매매기록</button>
+  </nav>
+
+  <main>
+    <section id="tab-add">
+      <div class="field">
+        <label for="f-stock">종목명</label>
+        <input type="text" id="f-stock" placeholder="예: 삼성전자">
+      </div>
+      <div class="field">
+        <label>매수 / 매도</label>
+        <div class="segmented">
+          <button type="button" class="sel-buy active" data-type="buy">매수</button>
+          <button type="button" class="sel-sell" data-type="sell">매도</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-date">날짜</label>
+        <input type="date" id="f-date">
+      </div>
+      <div class="field">
+        <label for="f-price">가격 (원)</label>
+        <input type="number" id="f-price" inputmode="numeric" placeholder="0">
+      </div>
+      <div class="field" id="f-qty-wrap">
+        <label for="f-qty">수량 (주)</label>
+        <input type="number" id="f-qty" inputmode="numeric" placeholder="0">
+      </div>
+      <div class="field" id="f-lot-section" hidden>
+        <label>어느 매수회차에서 팔았나요?</label>
+        <div id="f-lot-list"></div>
+        <div class="hint" id="f-lot-total">총 매도수량: 0주</div>
+      </div>
+      <div class="field">
+        <label>판단 이유 (체크리스트)</label>
+        <div class="chips" id="f-tags">
+          <div class="chip" data-tag="차트/기술적 분석">차트/기술적 분석</div>
+          <div class="chip" data-tag="뉴스/이슈">뉴스/이슈</div>
+          <div class="chip" data-tag="실적/재무">실적/재무</div>
+          <div class="chip" data-tag="공시">공시</div>
+          <div class="chip" data-tag="지인/커뮤니티">지인/커뮤니티</div>
+          <div class="chip" data-tag="기타">기타</div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-memo">메모 (자유 기록)</label>
+        <textarea id="f-memo" placeholder="판단 근거, 그때의 생각을 자유롭게 적어두세요"></textarea>
+      </div>
+      <div class="form-error" id="f-error"></div>
+      <button class="btn-primary" id="f-submit">기록 저장</button>
+    </section>
+
+    <section id="tab-holdings" hidden>
+      <div id="holdingsList"></div>
+      <div id="closedList"></div>
+    </section>
+
+    <section id="tab-history" hidden>
+      <div class="search-box">
+        <input type="text" id="searchStock" placeholder="종목명으로 검색">
+      </div>
+      <div id="historyList"></div>
+    </section>
+  </main>
+
+  <details class="backup-block">
+    <summary>데이터 백업 · 복원</summary>
+    <div class="hint">앱이 업데이트되면 가끔 저장된 데이터가 사라질 수 있어요. 가끔 "내보내기"로 백업해두시면 안전해요.</div>
+    <textarea id="backupText" placeholder="내보내기를 누르면 여기 백업 데이터가 나와요. 복원하려면 백업 데이터를 여기 붙여넣고 가져오기를 누르세요."></textarea>
+    <div class="row-flex" style="margin-top:8px;">
+      <button class="btn" id="exportBtn">내보내기</button>
+      <button class="btn" id="importBtn">가져오기</button>
+    </div>
+    <div class="hint" id="backupMsg"></div>
+  </details>
+</div>
+
+<script>
+(function() {
+  var STORAGE_KEY = 'trading_journal_trades_v1';
+  var CURPRICE_KEY = 'trading_journal_currentprices_v1';
+  var SEED_FLAG = 'trading_journal_seeded_v1';
+  var SEED_DATA = [
+    { id: 'restore-1', stock: '씨에스윈드', type: 'buy', date: '2026-09-01', price: 50000, qty: 10, tags: ['실적/재무'], memo: '실적이 좋다해서 삼' },
+    { id: 'restore-2', stock: '씨에스윈드', type: 'buy', date: '2026-09-04', price: 40000, qty: 10, tags: [], memo: '가격이 매력적이여서 삼' },
+    { id: 'restore-3', stock: '씨에스윈드', type: 'buy', date: '2026-09-15', price: 35000, qty: 5, tags: [], memo: '바닥인거 같아서 삼' }
+  ];
+  var trades = [];
+  var currentPrices = {};
+  var selectedTags = [];
+  var currentType = 'buy';
+
+  function loadTrades() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      trades = raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      trades = [];
+    }
+    try {
+      var raw2 = localStorage.getItem(CURPRICE_KEY);
+      currentPrices = raw2 ? JSON.parse(raw2) : {};
+    } catch (e) {
+      currentPrices = {};
+    }
+    try {
+      if (trades.length === 0 && !localStorage.getItem(SEED_FLAG)) {
+        trades = SEED_DATA.slice();
+        saveTrades();
+      }
+      localStorage.setItem(SEED_FLAG, '1');
+    } catch (e) { /* ignore */ }
+  }
+  function saveCurrentPrices() {
+    try {
+      localStorage.setItem(CURPRICE_KEY, JSON.stringify(currentPrices));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  function saveTrades() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function fmtWon(n) {
+    var r = Math.round(n);
+    return (r < 0 ? '-' : '') + Math.abs(r).toLocaleString('ko-KR') + '원';
+  }
+  function fmtSigned(n) {
+    var r = Math.round(n);
+    return (r >= 0 ? '+' : '-') + Math.abs(r).toLocaleString('ko-KR') + '원';
+  }
+  function fmtPct(n) {
+    return (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
+  }
+  function todayStr() {
+    var d = new Date();
+    var m = ('0' + (d.getMonth() + 1)).slice(-2);
+    var day = ('0' + d.getDate()).slice(-2);
+    return d.getFullYear() + '-' + m + '-' + day;
+  }
+
+  // ---------- Tabs ----------
+  var tabBtns = document.querySelectorAll('.tab-btn');
+  var tabSections = {
+    add: document.getElementById('tab-add'),
+    holdings: document.getElementById('tab-holdings'),
+    history: document.getElementById('tab-history')
+  };
+  tabBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tabBtns.forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      Object.keys(tabSections).forEach(function(k) {
+        tabSections[k].hidden = (k !== btn.dataset.tab);
+      });
+      if (btn.dataset.tab === 'holdings') renderHoldings();
+      if (btn.dataset.tab === 'history') renderHistory();
+    });
+  });
+
+  // ---------- Add form ----------
+  document.getElementById('f-date').value = todayStr();
+
+  document.querySelectorAll('.segmented button').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.segmented button').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      currentType = btn.dataset.type;
+      toggleQtyOrLots();
+    });
+  });
+
+  document.getElementById('f-stock').addEventListener('input', function() {
+    if (currentType === 'sell') renderLotSection();
+  });
+
+  function toggleQtyOrLots() {
+    var qtyWrap = document.getElementById('f-qty-wrap');
+    var lotSection = document.getElementById('f-lot-section');
+    if (currentType === 'sell') {
+      qtyWrap.hidden = true;
+      lotSection.hidden = false;
+      renderLotSection();
+    } else {
+      qtyWrap.hidden = false;
+      lotSection.hidden = true;
+    }
+  }
+
+  function getBuyLots(stockName) {
+    var buys = trades.filter(function(t) { return t.stock === stockName && t.type === 'buy'; })
+      .slice().sort(function(a, b) {
+        if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+        return a.id < b.id ? -1 : 1;
+      });
+    return buys.map(function(b) {
+      var allocated = 0;
+      trades.forEach(function(t) {
+        if (t.type === 'sell' && t.lots) {
+          t.lots.forEach(function(l) { if (l.buyId === b.id) allocated += l.qty; });
+        }
+      });
+      return { id: b.id, date: b.date, price: b.price, qty: b.qty, remaining: b.qty - allocated };
+    }).filter(function(l) { return l.remaining > 0.0001; });
+  }
+
+  function renderLotSection() {
+    var stock = document.getElementById('f-stock').value.trim();
+    var listEl = document.getElementById('f-lot-list');
+    var lots = stock ? getBuyLots(stock) : [];
+    if (lots.length === 0) {
+      listEl.innerHTML = '<div class="lot-empty">이 종목의 보유 중인 매수 기록이 없어요. (계좌 평균 기준으로만 기록돼요)</div>';
+      updateLotTotal();
+      return;
+    }
+    listEl.innerHTML = lots.map(function(l) {
+      return '<div class="lot-row" data-buyid="' + l.id + '" data-max="' + l.remaining + '">' +
+        '<div class="lot-info">' + fmtWon(l.price) + '<div class="d">' + l.date + ' 매수 · 잔여 ' + l.remaining.toLocaleString('ko-KR') + '주</div></div>' +
+        '<input type="number" class="lot-alloc-input" placeholder="0" min="0" max="' + l.remaining + '">' +
+        '</div>';
+    }).join('');
+    document.querySelectorAll('.lot-alloc-input').forEach(function(inp) {
+      inp.addEventListener('input', updateLotTotal);
+    });
+    updateLotTotal();
+  }
+
+  function updateLotTotal() {
+    var total = 0;
+    document.querySelectorAll('.lot-alloc-input').forEach(function(inp) {
+      var v = parseFloat(inp.value);
+      if (!isNaN(v) && v > 0) total += v;
+    });
+    document.getElementById('f-lot-total').textContent = '총 매도수량: ' + total.toLocaleString('ko-KR') + '주';
+  }
+
+  document.querySelectorAll('#f-tags .chip').forEach(function(chip) {
+    chip.addEventListener('click', function() {
+      var tag = chip.dataset.tag;
+      var idx = selectedTags.indexOf(tag);
+      if (idx === -1) {
+        selectedTags.push(tag);
+        chip.classList.add('active');
+      } else {
+        selectedTags.splice(idx, 1);
+        chip.classList.remove('active');
+      }
+    });
+  });
+
+  document.getElementById('f-submit').addEventListener('click', function() {
+    var stock = document.getElementById('f-stock').value.trim();
+    var date = document.getElementById('f-date').value;
+    var price = parseFloat(document.getElementById('f-price').value);
+    var memo = document.getElementById('f-memo').value.trim();
+    var errEl = document.getElementById('f-error');
+    var qty, lots = null;
+
+    if (!stock) { errEl.textContent = '종목명을 입력해주세요.'; return; }
+    if (!date) { errEl.textContent = '날짜를 선택해주세요.'; return; }
+    if (!price || price <= 0) { errEl.textContent = '가격을 정확히 입력해주세요.'; return; }
+
+    if (currentType === 'sell') {
+      lots = [];
+      var invalid = false;
+      document.querySelectorAll('.lot-row').forEach(function(row) {
+        var v = parseFloat(row.querySelector('.lot-alloc-input').value);
+        var max = parseFloat(row.dataset.max);
+        if (!isNaN(v) && v > 0) {
+          if (v > max + 0.0001) invalid = true;
+          lots.push({ buyId: row.dataset.buyid, qty: v });
+        }
+      });
+      if (invalid) { errEl.textContent = '잔여 수량보다 많이 배분할 수 없어요.'; return; }
+      qty = lots.reduce(function(sum, l) { return sum + l.qty; }, 0);
+      if (lots.length === 0) lots = null;
+      if (!qty || qty <= 0) { errEl.textContent = '매도 수량을 회차별로 입력해주세요 (매수 기록이 없다면 수량을 직접 입력할 수 없어요).'; return; }
+    } else {
+      qty = parseFloat(document.getElementById('f-qty').value);
+      if (!qty || qty <= 0) { errEl.textContent = '수량을 정확히 입력해주세요.'; return; }
+    }
+    errEl.textContent = '';
+
+    var newTrade = {
+      id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+      stock: stock,
+      type: currentType,
+      date: date,
+      price: price,
+      qty: qty,
+      tags: selectedTags.slice(),
+      memo: memo
+    };
+    if (lots) newTrade.lots = lots;
+    trades.push(newTrade);
+    saveTrades();
+
+    document.getElementById('f-stock').value = '';
+    document.getElementById('f-price').value = '';
+    document.getElementById('f-qty').value = '';
+    document.getElementById('f-memo').value = '';
+    document.getElementById('f-date').value = todayStr();
+    selectedTags = [];
+    document.querySelectorAll('#f-tags .chip').forEach(function(c) { c.classList.remove('active'); });
+    document.querySelectorAll('.segmented button').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelector('.sel-buy').classList.add('active');
+    currentType = 'buy';
+    toggleQtyOrLots();
+
+    updateSummary();
+  });
+
+  // ---------- Compute stats ----------
+  function computeStats() {
+    var byStock = {};
+    trades.forEach(function(t) {
+      if (!byStock[t.stock]) byStock[t.stock] = [];
+      byStock[t.stock].push(t);
+    });
+    var stockStats = {};
+    Object.keys(byStock).forEach(function(name) {
+      var list = byStock[name].slice().sort(function(a, b) {
+        if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+        return a.id < b.id ? -1 : 1;
+      });
+      var qty = 0, avgCost = 0, realized = 0;
+      list.forEach(function(t) {
+        if (t.type === 'buy') {
+          var newQty = qty + t.qty;
+          avgCost = qty === 0 ? t.price : (avgCost * qty + t.price * t.qty) / newQty;
+          qty = newQty;
+        } else {
+          var pl = (t.price - avgCost) * t.qty;
+          t._pl = pl;
+          t._plPct = avgCost > 0 ? ((t.price - avgCost) / avgCost * 100) : null;
+          realized += pl;
+          qty -= t.qty;
+          if (qty < 0.0001) qty = 0;
+          if (qty === 0) avgCost = 0;
+        }
+      });
+      stockStats[name] = { qty: qty, avgCost: avgCost, realized: realized, trades: list };
+    });
+    return stockStats;
+  }
+
+  // ---------- Summary ----------
+  function updateSummary() {
+    var stats = computeStats();
+    var totalRealized = 0;
+    var holdingCount = 0;
+    Object.keys(stats).forEach(function(k) {
+      totalRealized += stats[k].realized;
+      if (stats[k].qty > 0) holdingCount++;
+    });
+    var el = document.getElementById('sumRealized');
+    el.textContent = fmtSigned(totalRealized);
+    el.className = 'value ' + (totalRealized > 0 ? 'gain' : totalRealized < 0 ? 'loss' : '');
+    document.getElementById('sumHoldingCount').textContent = holdingCount;
+    document.getElementById('sumTradeCount').textContent = trades.length;
+  }
+
+  // ---------- Holdings tab ----------
+  function renderHoldings() {
+    var stats = computeStats();
+    var open = [];
+    var closed = [];
+    Object.keys(stats).forEach(function(name) {
+      var s = stats[name];
+      if (s.qty > 0) open.push({ name: name, s: s });
+      else if (s.trades.length > 0) closed.push({ name: name, s: s });
+    });
+    open.sort(function(a, b) { return (b.s.qty * b.s.avgCost) - (a.s.qty * a.s.avgCost); });
+
+    var holdEl = document.getElementById('holdingsList');
+    if (open.length === 0) {
+      holdEl.innerHTML = '<div class="empty-state">보유 중인 종목이 없어요.<br>기록추가 탭에서 매수 기록을 남겨보세요.</div>';
+    } else {
+      holdEl.innerHTML = open.map(function(o) {
+        var invested = o.s.qty * o.s.avgCost;
+        var plClass = o.s.realized > 0 ? 'gain' : o.s.realized < 0 ? 'loss' : '';
+        var savedPrice = currentPrices[o.name] || '';
+        var breakevenHtml = '';
+        if (savedPrice) {
+          var cur = parseFloat(savedPrice);
+          if (!isNaN(cur) && cur > 0) {
+            var diff = cur - o.s.avgCost;
+            var evalPL = diff * o.s.qty;
+            var evalPct = o.s.avgCost > 0 ? (diff / o.s.avgCost * 100) : 0;
+            if (diff >= 0) {
+              breakevenHtml = '<div class="breakeven-box gain">손익분기점(' + fmtWon(o.s.avgCost) + ') 돌파 — 지금 팔면 평가차익 ' +
+                fmtSigned(evalPL) + ' (' + fmtPct(evalPct) + ')</div>';
+            } else {
+              breakevenHtml = '<div class="breakeven-box loss">손익분기점(' + fmtWon(o.s.avgCost) + ')까지 ' + fmtWon(-diff) +
+                ' 남음 — 지금 팔면 평가손실 ' + fmtSigned(evalPL) + ' (' + fmtPct(evalPct) + ')</div>';
+            }
+          }
+        }
+        var openLots = getBuyLots(o.name);
+        var lotsHtml = openLots.length > 1
+          ? '<div class="open-lots-list">' +
+            openLots.map(function(l) {
+              return '<div class="lot-item"><span>' + l.date + ' · ' + fmtWon(l.price) + '</span><span class="v">' + l.remaining.toLocaleString('ko-KR') + '주</span></div>';
+            }).join('') + '</div>'
+          : '';
+        return '<div class="stock-card">' +
+          '<div class="name">' + escapeHtml(o.name) + '</div>' +
+          '<div class="row"><span>보유수량</span><span class="v">' + o.s.qty.toLocaleString('ko-KR') + '주</span></div>' +
+          '<div class="row"><span>평균매수가(손익분기점)</span><span class="v">' + fmtWon(o.s.avgCost) + '</span></div>' +
+          '<div class="row"><span>매입금액</span><span class="v">' + fmtWon(invested) + '</span></div>' +
+          '<div class="row"><span>누적 실현손익</span><span class="v ' + plClass + '">' + fmtSigned(o.s.realized) + '</span></div>' +
+          '<div class="curprice-row">' +
+            '<label>현재가</label>' +
+            '<input type="number" class="curprice-input" data-stock="' + escapeAttr(o.name) + '" value="' + escapeAttr(savedPrice) + '" placeholder="현재가 입력">' +
+          '</div>' +
+          breakevenHtml + lotsHtml +
+          '</div>';
+      }).join('');
+
+      document.querySelectorAll('.curprice-input').forEach(function(input) {
+        input.addEventListener('change', function() {
+          var stock = input.dataset.stock;
+          if (input.value) currentPrices[stock] = input.value;
+          else delete currentPrices[stock];
+          saveCurrentPrices();
+          renderHoldings();
+        });
+        input.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') input.blur();
+        });
+      });
+    }
+
+    var closedEl = document.getElementById('closedList');
+    if (closed.length === 0) {
+      closedEl.innerHTML = '';
+    } else {
+      closedEl.innerHTML = '<div class="closed-list-title">정리 완료한 종목</div>' +
+        closed.map(function(c) {
+          var plClass = c.s.realized > 0 ? 'gain' : c.s.realized < 0 ? 'loss' : '';
+          return '<div class="closed-item"><span>' + escapeHtml(c.name) + '</span>' +
+            '<span class="v ' + plClass + '">' + fmtSigned(c.s.realized) + '</span></div>';
+        }).join('');
+    }
+  }
+
+  // ---------- History tab ----------
+  var expandedId = null;
+  var confirmingDeleteId = null;
+
+  document.getElementById('searchStock').addEventListener('input', renderHistory);
+
+  function getTradeById(id) { return trades.find(function(x) { return x.id === id; }); }
+
+  function computeLotPL(t) {
+    if (!t.lots || !t.lots.length) return null;
+    var pl = 0;
+    var parts = [];
+    t.lots.forEach(function(l) {
+      var buy = getTradeById(l.buyId);
+      if (buy) {
+        pl += (t.price - buy.price) * l.qty;
+        parts.push({ price: buy.price, qty: l.qty });
+      }
+    });
+    return { pl: pl, parts: parts };
+  }
+
+  function renderHistory() {
+    var stats = computeStats();
+    var plMap = {};
+    Object.keys(stats).forEach(function(name) {
+      stats[name].trades.forEach(function(t) {
+        if (t._pl !== undefined) plMap[t.id] = { pl: t._pl, pct: t._plPct };
+      });
+    });
+
+    var query = document.getElementById('searchStock').value.trim().toLowerCase();
+    var list = trades.slice().filter(function(t) {
+      return !query || t.stock.toLowerCase().indexOf(query) !== -1;
+    }).sort(function(a, b) {
+      if (a.date !== b.date) return a.date > b.date ? -1 : 1;
+      return a.id > b.id ? -1 : 1;
+    });
+
+    var el = document.getElementById('historyList');
+    if (list.length === 0) {
+      el.innerHTML = '<div class="empty-state">기록이 없어요.</div>';
+      return;
+    }
+
+    el.innerHTML = list.map(function(t) {
+      var pl = plMap[t.id];
+      var plLinesHtml = '';
+      var lotTagsHtml = '';
+      if (t.type === 'sell' && pl) {
+        var plClass = pl.pl > 0 ? 'gain' : pl.pl < 0 ? 'loss' : '';
+        var lotPL = computeLotPL(t);
+        if (lotPL) {
+          var lotClass = lotPL.pl > 0 ? 'gain' : lotPL.pl < 0 ? 'loss' : '';
+          plLinesHtml = '<div class="pl-line"><span class="lbl">계좌 평균 기준 </span><span class="trade-pl ' + plClass + '">' + fmtSigned(pl.pl) +
+            (pl.pct !== null ? ' (' + fmtPct(pl.pct) + ')' : '') + '</span></div>' +
+            '<div class="pl-line"><span class="lbl">매수회차 기준 </span><span class="trade-pl ' + lotClass + '">' + fmtSigned(lotPL.pl) + '</span></div>';
+          lotTagsHtml = '<div class="trade-tags">' + lotPL.parts.map(function(p) {
+            return '<span class="lot-tag">' + fmtWon(p.price) + ' 매수분 ' + p.qty.toLocaleString('ko-KR') + '주</span>';
+          }).join('') + '</div>';
+        } else {
+          plLinesHtml = '<div class="pl-line"><span class="trade-pl ' + plClass + '">' + fmtSigned(pl.pl) +
+            (pl.pct !== null ? ' (' + fmtPct(pl.pct) + ')' : '') + '</span></div>';
+        }
+      }
+      var tagsHtml = t.tags && t.tags.length
+        ? '<div class="trade-tags">' + t.tags.map(function(tag) { return '<span>' + escapeHtml(tag) + '</span>'; }).join('') + '</div>'
+        : '';
+      var memoHtml = t.memo ? '<div class="trade-memo">' + escapeHtml(t.memo) + '</div>' : '';
+      var isExpanded = expandedId === t.id;
+
+      var card = '<div class="trade-card" data-id="' + t.id + '">' +
+        '<div class="trade-top">' +
+          '<span><span class="date">' + t.date + '</span><span class="stockname">' + escapeHtml(t.stock) + '</span></span>' +
+          '<span class="badge ' + t.type + '">' + (t.type === 'buy' ? '매수' : '매도') + '</span>' +
+        '</div>' +
+        '<div class="trade-detail">' + fmtWon(t.price) + ' × ' + t.qty.toLocaleString('ko-KR') + '주 = ' + fmtWon(t.price * t.qty) + '</div>' +
+        plLinesHtml + lotTagsHtml + tagsHtml + memoHtml;
+
+      if (isExpanded) {
+        card += renderEditPanel(t);
+      }
+      card += '</div>';
+      return card;
+    }).join('');
+
+    document.querySelectorAll('.trade-card').forEach(function(card) {
+      card.addEventListener('click', function(e) {
+        if (e.target.closest('.edit-panel')) return;
+        var id = card.dataset.id;
+        expandedId = (expandedId === id) ? null : id;
+        confirmingDeleteId = null;
+        renderHistory();
+      });
+    });
+
+    if (expandedId) bindEditPanel();
+  }
+
+  function renderEditPanel(t) {
+    var tagOptions = ['차트/기술적 분석', '뉴스/이슈', '실적/재무', '공시', '지인/커뮤니티', '기타'];
+    var chips = tagOptions.map(function(tag) {
+      var active = (t.tags || []).indexOf(tag) !== -1;
+      return '<div class="chip' + (active ? ' active' : '') + '" data-etag="' + escapeHtml(tag) + '">' + escapeHtml(tag) + '</div>';
+    }).join('');
+    var isLockedSell = t.type === 'sell' && t.lots && t.lots.length > 0;
+    var lockAttr = isLockedSell ? ' disabled' : '';
+
+    var body = '<div class="edit-panel" onclick="event.stopPropagation()">' +
+      (isLockedSell ? '<div class="hint">매수회차가 연결된 매도 기록이라 종목명·구분·수량은 고칠 수 없어요. 잘못 기록했다면 삭제 후 다시 넣어주세요.</div>' : '') +
+      '<div class="field"><label>종목명</label><input type="text" class="e-stock" value="' + escapeAttr(t.stock) + '"' + lockAttr + '></div>' +
+      '<div class="field"><label>매수 / 매도</label><div class="segmented">' +
+        '<button type="button" class="sel-buy e-type' + (t.type === 'buy' ? ' active' : '') + '" data-etype="buy"' + lockAttr + '>매수</button>' +
+        '<button type="button" class="sel-sell e-type' + (t.type === 'sell' ? ' active' : '') + '" data-etype="sell"' + lockAttr + '>매도</button>' +
+      '</div></div>' +
+      '<div class="field"><label>날짜</label><input type="date" class="e-date" value="' + t.date + '"></div>' +
+      '<div class="field"><label>가격 (원)</label><input type="number" class="e-price" value="' + t.price + '"></div>' +
+      '<div class="field"><label>수량 (주)</label><input type="number" class="e-qty" value="' + t.qty + '"' + lockAttr + '></div>' +
+      '<div class="field"><label>판단 이유</label><div class="chips e-tags">' + chips + '</div></div>' +
+      '<div class="field"><label>메모</label><textarea class="e-memo">' + escapeHtml(t.memo || '') + '</textarea></div>' +
+      '<div class="form-error e-error"></div>';
+
+    if (confirmingDeleteId === t.id) {
+      var linkedWarning = '';
+      if (t.type === 'buy') {
+        var hasLink = trades.some(function(other) {
+          return other.type === 'sell' && other.lots && other.lots.some(function(l) { return l.buyId === t.id; });
+        });
+        if (hasLink) linkedWarning = ' 이 매수건을 매도회차로 사용한 기록이 있어서, 삭제하면 그 매도건의 매수회차 기준 손익이 부정확해질 수 있어요.';
+      }
+      body += '<div class="confirm-delete">이 기록을 삭제할까요? 되돌릴 수 없어요.' + linkedWarning +
+        '<div class="row"><button class="do-delete">삭제</button><button class="cancel cancel-delete">취소</button></div></div>';
+    } else {
+      body += '<div class="edit-actions"><button class="save">저장</button><button class="delete">삭제</button></div>';
+    }
+    body += '</div>';
+    return body;
+  }
+
+  function bindEditPanel() {
+    var panel = document.querySelector('.edit-panel');
+    if (!panel) return;
+    var eType = 'buy';
+    panel.querySelectorAll('.e-type').forEach(function(b) {
+      if (b.classList.contains('active')) eType = b.dataset.etype;
+      b.addEventListener('click', function() {
+        panel.querySelectorAll('.e-type').forEach(function(x) { x.classList.remove('active'); });
+        b.classList.add('active');
+        eType = b.dataset.etype;
+      });
+    });
+    var eTags = [];
+    panel.querySelectorAll('.e-tags .chip').forEach(function(c) {
+      if (c.classList.contains('active')) eTags.push(c.dataset.etag);
+      c.addEventListener('click', function() {
+        var tag = c.dataset.etag;
+        var idx = eTags.indexOf(tag);
+        if (idx === -1) { eTags.push(tag); c.classList.add('active'); }
+        else { eTags.splice(idx, 1); c.classList.remove('active'); }
+      });
+    });
+
+    var saveBtn = panel.querySelector('.save');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', function() {
+        var id = expandedId;
+        var t = trades.find(function(x) { return x.id === id; });
+        if (!t) return;
+        var errEl = panel.querySelector('.e-error');
+        var newQty = parseFloat(panel.querySelector('.e-qty').value);
+        if (t.type === 'buy' && !isNaN(newQty) && newQty > 0) {
+          var allocated = 0;
+          trades.forEach(function(other) {
+            if (other.type === 'sell' && other.lots) {
+              other.lots.forEach(function(l) { if (l.buyId === t.id) allocated += l.qty; });
+            }
+          });
+          if (newQty < allocated - 0.0001) {
+            errEl.textContent = '이미 ' + allocated.toLocaleString('ko-KR') + '주가 매도 기록에 배분돼 있어서 그보다 적게 줄일 수 없어요.';
+            return;
+          }
+        }
+        t.stock = panel.querySelector('.e-stock').value.trim() || t.stock;
+        t.type = eType;
+        t.date = panel.querySelector('.e-date').value || t.date;
+        var price = parseFloat(panel.querySelector('.e-price').value);
+        if (price > 0) t.price = price;
+        if (newQty > 0) t.qty = newQty;
+        t.tags = eTags.slice();
+        t.memo = panel.querySelector('.e-memo').value.trim();
+        saveTrades();
+        expandedId = null;
+        updateSummary();
+        renderHistory();
+      });
+    }
+    var delBtn = panel.querySelector('.delete');
+    if (delBtn) {
+      delBtn.addEventListener('click', function() {
+        confirmingDeleteId = expandedId;
+        renderHistory();
+      });
+    }
+    var doDelete = panel.querySelector('.do-delete');
+    if (doDelete) {
+      doDelete.addEventListener('click', function() {
+        var id = expandedId;
+        trades = trades.filter(function(x) { return x.id !== id; });
+        saveTrades();
+        expandedId = null;
+        confirmingDeleteId = null;
+        updateSummary();
+        renderHistory();
+      });
+    }
+    var cancelDelete = panel.querySelector('.cancel-delete');
+    if (cancelDelete) {
+      cancelDelete.addEventListener('click', function() {
+        confirmingDeleteId = null;
+        renderHistory();
+      });
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function escapeAttr(s) { return escapeHtml(s); }
+
+  // ---------- Backup / restore ----------
+  document.getElementById('exportBtn').addEventListener('click', function() {
+    var data = { trades: trades, currentPrices: currentPrices };
+    document.getElementById('backupText').value = JSON.stringify(data);
+    document.getElementById('backupMsg').textContent = '아래 내용을 복사해서 메모장 등에 보관해두세요.';
+  });
+  document.getElementById('importBtn').addEventListener('click', function() {
+    var msgEl = document.getElementById('backupMsg');
+    var raw = document.getElementById('backupText').value.trim();
+    if (!raw) { msgEl.textContent = '붙여넣을 데이터가 없어요.'; return; }
+    try {
+      var data = JSON.parse(raw);
+      var incoming = Array.isArray(data) ? data : (data.trades || []);
+      var existingIds = {};
+      trades.forEach(function(t) { existingIds[t.id] = true; });
+      var added = 0;
+      incoming.forEach(function(t) {
+        if (t && t.id && !existingIds[t.id] && t.stock && t.type && t.price != null && t.qty != null) {
+          trades.push(t);
+          existingIds[t.id] = true;
+          added++;
+        }
+      });
+      if (!Array.isArray(data) && data.currentPrices) {
+        Object.keys(data.currentPrices).forEach(function(k) { currentPrices[k] = data.currentPrices[k]; });
+        saveCurrentPrices();
+      }
+      saveTrades();
+      msgEl.textContent = added + '개 기록을 가져왔어요. (이미 있던 기록은 중복으로 넣지 않았어요)';
+      updateSummary();
+      renderHoldings();
+      renderHistory();
+    } catch (e) {
+      msgEl.textContent = '데이터를 읽을 수 없어요. 백업 데이터 그대로 붙여넣어주세요.';
+    }
+  });
+
+  // ---------- Init ----------
+  loadTrades();
+  updateSummary();
+})();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').catch(function() { /* offline지원 없어도 앱은 정상 동작 */ });
+  });
+}
+</script>
+</body>
+</html>
