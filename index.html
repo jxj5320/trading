@@ -95,9 +95,9 @@
     letter-spacing: -0.02em;
   }
   .summary-row {
-    display: flex;
-    gap: 18px;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 18px;
   }
   .summary-item .label {
     font-size: 12px;
@@ -484,8 +484,12 @@
     <h1>매매일지</h1>
     <div class="summary-row">
       <div class="summary-item">
-        <div class="label">누적 실현손익 (계좌 평균)</div>
+        <div class="label">평균기준</div>
         <div class="value" id="sumRealized">0원</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">회차기준</div>
+        <div class="value" id="sumLotRealized">0원</div>
       </div>
       <div class="summary-item">
         <div class="label">보유 종목</div>
@@ -496,7 +500,6 @@
         <div class="value" id="sumTradeCount">0</div>
       </div>
     </div>
-    <div class="hint" id="sumLotHint" style="margin-top:8px;"></div>
   </header>
 
   <nav class="tabs">
@@ -510,7 +513,13 @@
     <section id="tab-add">
       <div class="field">
         <label for="f-stock">종목명</label>
-        <input type="text" id="f-stock" placeholder="예: 삼성전자">
+        <input type="text" id="f-stock" list="f-stock-list" placeholder="예: 삼성전자" autocomplete="off">
+        <datalist id="f-stock-list"></datalist>
+      </div>
+      <div class="field">
+        <label for="f-account">계좌</label>
+        <input type="text" id="f-account" list="f-account-list" placeholder="예: 52007900" autocomplete="off">
+        <datalist id="f-account-list"></datalist>
       </div>
       <div class="field">
         <label>매수 / 매도</label>
@@ -742,8 +751,10 @@
     var listEl = document.getElementById('f-lot-list');
     var lots = stock ? getBuyLots(stock) : [];
     if (lots.length === 0) {
-      listEl.innerHTML = '<div class="lot-empty">이 종목의 보유 중인 매수 기록이 없어요. (계좌 평균 기준으로만 기록돼요)</div>';
-      updateLotTotal();
+      listEl.innerHTML = '<div class="lot-empty">이 종목의 보유 중인 매수 기록이 없어요. (계좌 평균 기준으로만 기록되고, 매수회차 기준 손익은 계산되지 않아요)</div>' +
+        '<div class="field" style="margin-top:8px;"><label for="f-manual-qty">매도 수량 (주)</label>' +
+        '<input type="number" id="f-manual-qty" inputmode="numeric" placeholder="0"></div>';
+      document.getElementById('f-lot-total').textContent = '';
       return;
     }
     listEl.innerHTML = lots.map(function(l) {
@@ -810,6 +821,7 @@
 
   document.getElementById('f-submit').addEventListener('click', function() {
     var stock = document.getElementById('f-stock').value.trim();
+    var account = document.getElementById('f-account').value.trim();
     var date = document.getElementById('f-date').value;
     var price = parseFloat(document.getElementById('f-price').value);
     var memo = document.getElementById('f-memo').value.trim();
@@ -821,20 +833,28 @@
     if (!price || price <= 0) { errEl.textContent = '가격을 정확히 입력해주세요.'; return; }
 
     if (currentType === 'sell') {
-      lots = [];
-      var invalid = false;
-      document.querySelectorAll('.lot-row').forEach(function(row) {
-        var v = parseFloat(row.querySelector('.lot-alloc-input').value);
-        var max = parseFloat(row.dataset.max);
-        if (!isNaN(v) && v > 0) {
-          if (v > max + 0.0001) invalid = true;
-          lots.push({ buyId: row.dataset.buyid, qty: v });
-        }
-      });
-      if (invalid) { errEl.textContent = '잔여 수량보다 많이 배분할 수 없어요.'; return; }
-      qty = lots.reduce(function(sum, l) { return sum + l.qty; }, 0);
-      if (lots.length === 0) lots = null;
-      if (!qty || qty <= 0) { errEl.textContent = '매도 수량을 회차별로 입력해주세요 (매수 기록이 없다면 수량을 직접 입력할 수 없어요).'; return; }
+      var lotRows = document.querySelectorAll('.lot-row');
+      if (lotRows.length > 0) {
+        lots = [];
+        var invalid = false;
+        lotRows.forEach(function(row) {
+          var v = parseFloat(row.querySelector('.lot-alloc-input').value);
+          var max = parseFloat(row.dataset.max);
+          if (!isNaN(v) && v > 0) {
+            if (v > max + 0.0001) invalid = true;
+            lots.push({ buyId: row.dataset.buyid, qty: v });
+          }
+        });
+        if (invalid) { errEl.textContent = '잔여 수량보다 많이 배분할 수 없어요.'; return; }
+        qty = lots.reduce(function(sum, l) { return sum + l.qty; }, 0);
+        if (lots.length === 0) lots = null;
+        if (!qty || qty <= 0) { errEl.textContent = '매도 수량을 회차별로 입력해주세요.'; return; }
+      } else {
+        var manualEl = document.getElementById('f-manual-qty');
+        qty = manualEl ? parseFloat(manualEl.value) : NaN;
+        lots = null;
+        if (!qty || qty <= 0) { errEl.textContent = '매도 수량을 입력해주세요.'; return; }
+      }
     } else {
       qty = parseFloat(document.getElementById('f-qty').value);
       if (!qty || qty <= 0) { errEl.textContent = '수량을 정확히 입력해주세요.'; return; }
@@ -851,6 +871,7 @@
       tags: selectedTags.slice(),
       memo: memo
     };
+    if (account) newTrade.account = account;
     if (lots) newTrade.lots = lots;
     trades.push(newTrade);
     saveTrades();
@@ -907,6 +928,7 @@
   // ---------- Summary ----------
   function updateSummary() {
     refreshRenameSelect();
+    refreshAutocompleteLists();
     var stats = computeStats();
     var totalRealized = 0;
     var totalLotRealized = 0;
@@ -929,12 +951,9 @@
     document.getElementById('sumHoldingCount').textContent = holdingCount;
     document.getElementById('sumTradeCount').textContent = trades.length;
 
-    var hintEl = document.getElementById('sumLotHint');
-    if (hasAnyLot) {
-      hintEl.textContent = '매수회차 기준으로 보면 ' + fmtSigned(totalLotRealized) + '이에요 (실제 계좌에 찍히는 숫자는 위쪽 계좌 평균 기준이에요)';
-    } else {
-      hintEl.textContent = '';
-    }
+    var lotEl = document.getElementById('sumLotRealized');
+    lotEl.textContent = fmtSigned(totalLotRealized);
+    lotEl.className = 'value ' + (totalLotRealized > 0 ? 'gain' : totalLotRealized < 0 ? 'loss' : '');
   }
 
   // ---------- Holdings tab ----------
@@ -1090,6 +1109,7 @@
         ? '<div class="trade-tags">' + t.tags.map(function(tag) { return '<span>' + escapeHtml(tag) + '</span>'; }).join('') + '</div>'
         : '';
       var memoHtml = t.memo ? '<div class="trade-memo">' + escapeHtml(t.memo) + '</div>' : '';
+      var accountHtml = t.account ? '<div class="trade-memo">계좌: ' + escapeHtml(t.account) + '</div>' : '';
       var isExpanded = expandedId === t.id;
 
       var card = '<div class="trade-card" data-id="' + t.id + '">' +
@@ -1098,7 +1118,7 @@
           '<span class="badge ' + t.type + '">' + (t.type === 'buy' ? '매수' : '매도') + '</span>' +
         '</div>' +
         '<div class="trade-detail">' + fmtWon(t.price) + ' × ' + t.qty.toLocaleString('ko-KR') + '주 = ' + fmtWon(t.price * t.qty) + '</div>' +
-        plLinesHtml + lotTagsHtml + tagsHtml + memoHtml;
+        plLinesHtml + lotTagsHtml + tagsHtml + memoHtml + accountHtml;
 
       if (isExpanded) {
         card += renderEditPanel(t);
@@ -1132,6 +1152,7 @@
     var body = '<div class="edit-panel" onclick="event.stopPropagation()">' +
       (isLockedSell ? '<div class="hint">매수회차가 연결된 매도 기록이라 종목명·구분·수량은 고칠 수 없어요. 잘못 기록했다면 삭제 후 다시 넣어주세요.</div>' : '') +
       '<div class="field"><label>종목명</label><input type="text" class="e-stock" value="' + escapeAttr(t.stock) + '"' + lockAttr + '></div>' +
+      '<div class="field"><label>계좌</label><input type="text" class="e-account" list="f-account-list" value="' + escapeAttr(t.account || '') + '"></div>' +
       '<div class="field"><label>매수 / 매도</label><div class="segmented">' +
         '<button type="button" class="sel-buy e-type' + (t.type === 'buy' ? ' active' : '') + '" data-etype="buy"' + lockAttr + '>매수</button>' +
         '<button type="button" class="sel-sell e-type' + (t.type === 'sell' ? ' active' : '') + '" data-etype="sell"' + lockAttr + '>매도</button>' +
@@ -1204,6 +1225,8 @@
           }
         }
         t.stock = panel.querySelector('.e-stock').value.trim() || t.stock;
+        var accVal = panel.querySelector('.e-account').value.trim();
+        if (accVal) t.account = accVal; else delete t.account;
         t.type = eType;
         t.date = panel.querySelector('.e-date').value || t.date;
         var price = parseFloat(panel.querySelector('.e-price').value);
@@ -1251,6 +1274,22 @@
     });
   }
   function escapeAttr(s) { return escapeHtml(s); }
+
+  // ---------- Autocomplete lists (stock name, account) ----------
+  function refreshAutocompleteLists() {
+    var stockSeen = {}, stockNames = [];
+    var accSeen = {}, accounts = [];
+    trades.forEach(function(t) {
+      if (!stockSeen[t.stock]) { stockSeen[t.stock] = true; stockNames.push(t.stock); }
+      if (t.account && !accSeen[t.account]) { accSeen[t.account] = true; accounts.push(t.account); }
+    });
+    document.getElementById('f-stock-list').innerHTML = stockNames.map(function(n) {
+      return '<option value="' + escapeAttr(n) + '">';
+    }).join('');
+    document.getElementById('f-account-list').innerHTML = accounts.map(function(n) {
+      return '<option value="' + escapeAttr(n) + '">';
+    }).join('');
+  }
 
   // ---------- Stock name fix (typo merge) ----------
   function refreshRenameSelect() {
