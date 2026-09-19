@@ -778,6 +778,17 @@
     document.getElementById('f-lot-total').textContent = '총 매도수량: ' + total.toLocaleString('ko-KR') + '주';
   }
 
+  function lotItemHtml(l, curPrice) {
+    var diffHtml = '';
+    if (curPrice != null && !isNaN(curPrice) && curPrice > 0) {
+      var diff = curPrice - l.price;
+      var diffClass = diff > 0 ? 'gain' : diff < 0 ? 'loss' : '';
+      var pct = l.price > 0 ? (diff / l.price * 100) : 0;
+      diffHtml = ' <span class="v ' + diffClass + '">' + fmtSigned(diff) + ' (' + fmtPct(pct) + ')</span>';
+    }
+    return '<div class="lot-item"><span>' + l.date + ' · ' + fmtWon(l.price) + diffHtml + '</span><span class="v">' + l.remaining.toLocaleString('ko-KR') + '주</span></div>';
+  }
+
   function renderLots() {
     var seen = {};
     var stockNames = [];
@@ -792,9 +803,8 @@
       var totalQty = lots.reduce(function(s, l) { return s + l.remaining; }, 0);
       var totalValue = lots.reduce(function(s, l) { return s + l.remaining * l.price; }, 0);
       var avg = totalQty > 0 ? totalValue / totalQty : 0;
-      var rows = lots.map(function(l) {
-        return '<div class="lot-item"><span>' + l.date + ' 매수 · ' + fmtWon(l.price) + '</span><span class="v">' + l.remaining.toLocaleString('ko-KR') + '주</span></div>';
-      }).join('');
+      var curPrice = parseFloat(currentPrices[name]);
+      var rows = lots.map(function(l) { return lotItemHtml(l, curPrice); }).join('');
       cards.push('<div class="stock-card"><div class="name">' + escapeHtml(name) + '</div>' +
         '<div class="row"><span>총 잔량</span><span class="v">' + totalQty.toLocaleString('ko-KR') + '주</span></div>' +
         (lots.length > 1 ? '<div class="row"><span>참고: 계좌 평단가</span><span class="v">' + fmtWon(avg) + '</span></div>' : '') +
@@ -993,11 +1003,9 @@
           }
         }
         var openLots = getBuyLots(o.name);
+        var curPriceNum = parseFloat(savedPrice);
         var lotsHtml = openLots.length > 1
-          ? '<div class="open-lots-list">' +
-            openLots.map(function(l) {
-              return '<div class="lot-item"><span>' + l.date + ' · ' + fmtWon(l.price) + '</span><span class="v">' + l.remaining.toLocaleString('ko-KR') + '주</span></div>';
-            }).join('') + '</div>'
+          ? '<div class="open-lots-list">' + openLots.map(function(l) { return lotItemHtml(l, curPriceNum); }).join('') + '</div>'
           : '';
         return '<div class="stock-card">' +
           '<div class="name">' + escapeHtml(o.name) + '</div>' +
