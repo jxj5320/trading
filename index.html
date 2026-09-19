@@ -581,6 +581,21 @@
     </div>
     <div class="hint" id="backupMsg"></div>
   </details>
+
+  <details class="backup-block">
+    <summary>종목명 오타 수정</summary>
+    <div class="hint">오타로 종목이 두 개로 나뉘었을 때, 여기서 한 번에 합칠 수 있어요.</div>
+    <div class="field" style="margin-top:8px;">
+      <label>이 종목명을</label>
+      <select id="renameFrom"></select>
+    </div>
+    <div class="field">
+      <label>이 이름으로 바꾸기</label>
+      <input type="text" id="renameTo" placeholder="예: 삼성전자">
+    </div>
+    <button class="btn-primary" id="renameBtn">변경하기</button>
+    <div class="hint" id="renameMsg"></div>
+  </details>
 </div>
 
 <script>
@@ -890,6 +905,7 @@
 
   // ---------- Summary ----------
   function updateSummary() {
+    refreshRenameSelect();
     var stats = computeStats();
     var totalRealized = 0;
     var holdingCount = 0;
@@ -1218,6 +1234,42 @@
     });
   }
   function escapeAttr(s) { return escapeHtml(s); }
+
+  // ---------- Stock name fix (typo merge) ----------
+  function refreshRenameSelect() {
+    var sel = document.getElementById('renameFrom');
+    var prevValue = sel.value;
+    var seen = {};
+    var names = [];
+    trades.forEach(function(t) { if (!seen[t.stock]) { seen[t.stock] = true; names.push(t.stock); } });
+    sel.innerHTML = names.length
+      ? names.map(function(n) { return '<option value="' + escapeAttr(n) + '">' + escapeHtml(n) + '</option>'; }).join('')
+      : '<option value="">(종목 없음)</option>';
+    if (names.indexOf(prevValue) !== -1) sel.value = prevValue;
+  }
+
+  document.getElementById('renameBtn').addEventListener('click', function() {
+    var from = document.getElementById('renameFrom').value;
+    var to = document.getElementById('renameTo').value.trim();
+    var msgEl = document.getElementById('renameMsg');
+    if (!from) { msgEl.textContent = '바꿀 종목이 없어요.'; return; }
+    if (!to) { msgEl.textContent = '새 종목명을 입력해주세요.'; return; }
+    if (from === to) { msgEl.textContent = '이름이 같아요.'; return; }
+    var count = 0;
+    trades.forEach(function(t) { if (t.stock === from) { t.stock = to; count++; } });
+    if (currentPrices[from] != null) {
+      if (currentPrices[to] == null) currentPrices[to] = currentPrices[from];
+      delete currentPrices[from];
+      saveCurrentPrices();
+    }
+    saveTrades();
+    msgEl.textContent = count + '건을 "' + to + '"로 합쳤어요.';
+    document.getElementById('renameTo').value = '';
+    refreshRenameSelect();
+    updateSummary();
+    renderHoldings();
+    renderHistory();
+  });
 
   // ---------- Backup / restore ----------
   document.getElementById('exportBtn').addEventListener('click', function() {
