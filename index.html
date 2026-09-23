@@ -213,6 +213,22 @@
     border-color: var(--chip-active-bg);
   }
 
+  .row-flex { display: flex; gap: 8px; }
+
+  .btn {
+    padding: 10px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    background: var(--bg-elevated);
+    color: var(--ink);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    flex: 1;
+  }
+  .btn-danger { color: var(--danger); border-color: var(--danger); }
+
   .btn-primary {
     width: 100%;
     padding: 13px;
@@ -233,7 +249,22 @@
     min-height: 16px;
   }
 
-  .search-box { margin-bottom: 14px; }
+  .search-box {
+    margin-bottom: 14px;
+    display: flex;
+    gap: 8px;
+  }
+  .search-box input[type="text"], .search-box select {
+    padding: 10px 11px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    color: var(--ink);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14.5px;
+  }
+  .search-box input[type="text"] { flex: 3; min-width: 0; }
+  .search-box select { flex: 2; min-width: 0; }
 
   .empty-state {
     text-align: center;
@@ -574,6 +605,7 @@
     <section id="tab-history" hidden>
       <div class="search-box">
         <input type="text" id="searchStock" placeholder="종목명으로 검색">
+        <select id="filterAccount"><option value="">전체 계좌</option></select>
       </div>
       <div id="historyList"></div>
     </section>
@@ -590,6 +622,7 @@
     <div class="row-flex" style="margin-top:8px;">
       <button class="btn" id="exportBtn">내보내기</button>
       <button class="btn" id="importBtn">가져오기</button>
+      <button class="btn btn-danger" id="clearAllBtn">전체 삭제</button>
     </div>
     <div class="hint" id="backupMsg"></div>
   </details>
@@ -1055,6 +1088,18 @@
   var confirmingDeleteId = null;
 
   document.getElementById('searchStock').addEventListener('input', renderHistory);
+  document.getElementById('filterAccount').addEventListener('change', renderHistory);
+
+  function refreshAccountFilter() {
+    var sel = document.getElementById('filterAccount');
+    var prevValue = sel.value;
+    var seen = {};
+    var accounts = [];
+    trades.forEach(function(t) { if (t.account && !seen[t.account]) { seen[t.account] = true; accounts.push(t.account); } });
+    sel.innerHTML = '<option value="">전체 계좌</option>' +
+      accounts.map(function(a) { return '<option value="' + escapeAttr(a) + '">' + escapeHtml(a) + '</option>'; }).join('');
+    if (accounts.indexOf(prevValue) !== -1) sel.value = prevValue;
+  }
 
   function getTradeById(id) { return trades.find(function(x) { return x.id === id; }); }
 
@@ -1073,6 +1118,7 @@
   }
 
   function renderHistory() {
+    refreshAccountFilter();
     var stats = computeStats();
     var plMap = {};
     Object.keys(stats).forEach(function(name) {
@@ -1082,8 +1128,11 @@
     });
 
     var query = document.getElementById('searchStock').value.trim().toLowerCase();
+    var selectedAccount = document.getElementById('filterAccount').value;
     var list = trades.slice().filter(function(t) {
-      return !query || t.stock.toLowerCase().indexOf(query) !== -1;
+      var matchesQuery = !query || t.stock.toLowerCase().indexOf(query) !== -1;
+      var matchesAccount = !selectedAccount || t.account === selectedAccount;
+      return matchesQuery && matchesAccount;
     }).sort(function(a, b) {
       if (a.date !== b.date) return a.date > b.date ? -1 : 1;
       return a.id > b.id ? -1 : 1;
@@ -1372,6 +1421,35 @@
     } catch (e) {
       msgEl.textContent = '데이터를 읽을 수 없어요. 백업 데이터 그대로 붙여넣어주세요.';
     }
+  });
+
+  var clearAllConfirming = false;
+  document.getElementById('clearAllBtn').addEventListener('click', function() {
+    var btn = this;
+    var msgEl = document.getElementById('backupMsg');
+    if (!clearAllConfirming) {
+      clearAllConfirming = true;
+      btn.textContent = '정말요? 다시 누르면 삭제';
+      msgEl.textContent = '모든 매매 기록과 현재가가 삭제돼요. 되돌릴 수 없어요. (5초 후 취소됨)';
+      setTimeout(function() {
+        if (clearAllConfirming) {
+          clearAllConfirming = false;
+          btn.textContent = '전체 삭제';
+          msgEl.textContent = '';
+        }
+      }, 5000);
+      return;
+    }
+    trades = [];
+    currentPrices = {};
+    saveTrades();
+    saveCurrentPrices();
+    clearAllConfirming = false;
+    btn.textContent = '전체 삭제';
+    msgEl.textContent = '전부 삭제했어요.';
+    updateSummary();
+    renderHoldings();
+    renderHistory();
   });
 
   // ---------- Init ----------
